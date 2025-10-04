@@ -47,14 +47,14 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build
         run: |
-          dotnet build build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
-            -restore -m:1 -nr:false `
-            -v:m -p:WarningLevel=0 `
-            -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} `
-            -p:StridePlatforms=Linux `
+          dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
+            -restore -m:1 -nr:false \
+            -v:m -p:WarningLevel=0 \
+            -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
+            -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL
       - name: Test
         run: |
-          dotnet test build\Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf `
-            --no-build `
+          dotnet test build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
+            --no-build \
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }}
