@@ -89,7 +89,6 @@ jobs:
           }
       - name: Build
         run: |
-          $ndkPath = "C:\Android\android-sdk\ndk\21.4.7075529"
           msbuild build\Stride.Android.sln `
             -restore -m:1 -nr:false `
             -v:m -p:WarningLevel=0 `
@@ -97,4 +96,4 @@ jobs:
             -p:StridePlatforms=Android `
             -p:StrideSkipUnitTests=true `
             -p:StrideSkipAutoPack=true `
-            -p:_AndroidNdkDirectory="$ndkPath"
+            -p:_AndroidNdkDirectory="$env:ANDROID_NDK_ROOT"
