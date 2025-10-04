@@ -48,7 +48,12 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libbsd-dev clang llvm
+          sudo apt-get install -y libbsd-dev clang
+      - name: Patch NativePath for Linux
+        run: |
+          # Make strlcat_chk and strlcpy_chk non-fatal on Linux
+          sed -i 's/#if !__has_builtin(__builtin___strlcat_chk)/#if !__has_builtin(__builtin___strlcat_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
+          sed -i 's/#if !__has_builtin(__builtin___strlcpy_chk)/#if !__has_builtin(__builtin___strlcpy_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
       - name: Build
         run: |
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
