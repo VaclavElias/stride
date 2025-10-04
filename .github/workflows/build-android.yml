@@ -54,6 +54,14 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install Android Workload
         run: dotnet workload install android
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          ndk-version: 21.4.7075529
+      - name: Configure NDK Environment
+        run: |
+          echo "ANDROID_NDK_ROOT=$env:ANDROID_NDK_HOME" >> $env:GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$env:ANDROID_NDK_HOME" >> $env:GITHUB_ENV
       - uses: microsoft/setup-msbuild@v2
       - name: Build
         run: |
