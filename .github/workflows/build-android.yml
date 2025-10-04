@@ -54,6 +54,14 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install Android Workload
         run: dotnet workload install android
+      - name: Remove Conflicting NDK
+        shell: pwsh
+        run: |
+          $conflictingNdk = "C:\Android\android-sdk\ndk\26.3.11579264"
+          if (Test-Path $conflictingNdk) {
+            Write-Host "Removing conflicting NDK 26.3.11579264"
+            Remove-Item -Path $conflictingNdk -Recurse -Force
+          }
       - name: Setup Android
         uses: android-actions/setup-android@v3
         with:
