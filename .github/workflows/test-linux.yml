@@ -62,15 +62,10 @@ jobs:
           # Only add the local source (not the non-existent global one)
           dotnet nuget add source "$LOCAL_PACKAGES_PATH" --name "StrideDev Local"
 
-          # Disable signature validation for restore (workaround for expired timestamping certificates)
-          export DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS=true
-
           # List configured sources
           echo "==== Configured NuGet Sources ===="
           dotnet nuget list source
       - name: Build
-        env:
-          DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS: true
         run: |
           # Get absolute path for restore sources
           LOCAL_PACKAGES_PATH="$(pwd)/bin/packages"
@@ -81,7 +76,9 @@ jobs:
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL \
-            -p:RestoreAdditionalProjectSources=$LOCAL_PACKAGES_PATH
+            -p:RestoreAdditionalProjectSources=$LOCAL_PACKAGES_PATH \
+            -p:RestoreIgnoreFailedSources=true \
+            -p:NuGetVerifySignatures=false
       - name: Inspect NuGet Local Sources (always)
         if: always()
         run: |
@@ -94,8 +91,6 @@ jobs:
           echo "==== StrideDev Local ./bin/packages ===="
           if [ -d ./bin/packages ]; then find ./bin/packages -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
       - name: Test
-        env:
-          DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS: true
         run: |
           dotnet test build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
             --no-build \
