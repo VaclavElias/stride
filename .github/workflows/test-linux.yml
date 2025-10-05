@@ -56,22 +56,30 @@ jobs:
           sed -i 's/#if !__has_builtin(__builtin___strlcpy_chk)/#if !__has_builtin(__builtin___strlcpy_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
       - name: Configure NuGet Sources
         run: |
-          # Add local package sources
-          dotnet nuget add source ./bin/packages --name "StrideDev Local"
-          dotnet nuget add source "$HOME/.local/share/Stride/NuGetDev" --name "StrideDev Global"
+          # Get absolute path to local packages
+          LOCAL_PACKAGES_PATH="$(pwd)/bin/packages"
+          GLOBAL_PACKAGES_PATH="$HOME/.local/share/Stride/NuGetDev"
+
+          # Add local package sources with absolute paths
+          dotnet nuget add source "$LOCAL_PACKAGES_PATH" --name "StrideDev Local"
+          dotnet nuget add source "$GLOBAL_PACKAGES_PATH" --name "StrideDev Global"
 
           # List configured sources
           echo "==== Configured NuGet Sources ===="
           dotnet nuget list source
       - name: Build
         run: |
+          # Get absolute paths for restore sources
+          LOCAL_PACKAGES_PATH="$(pwd)/bin/packages"
+          GLOBAL_PACKAGES_PATH="$HOME/.local/share/Stride/NuGetDev"
+
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
             -restore -m:1 -nr:false \
             -v:m -p:WarningLevel=0 \
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL \
-            -p:RestoreAdditionalProjectSources=./bin/packages:$HOME/.local/share/Stride/NuGetDev
+            -p:RestoreAdditionalProjectSources=$LOCAL_PACKAGES_PATH:$GLOBAL_PACKAGES_PATH
       - name: Inspect NuGet Local Sources (always)
         if: always()
         run: |
