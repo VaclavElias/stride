@@ -56,35 +56,46 @@ jobs:
           sed -i 's/#if !__has_builtin(__builtin___strlcpy_chk)/#if !__has_builtin(__builtin___strlcpy_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
       - name: Create NuGet.config for local packages
         run: |
-          cat > nuget.config << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <packageSources>
-              <add key="StrideDev Local" value="./bin/packages" />
-              <add key="StrideDev Global" value="$HOME/.local/share/Stride/NuGetDev" />
-              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-            </packageSources>
+          WORKSPACE_PATH="$(pwd)"
+          LOCAL_PACKAGES_PATH="$WORKSPACE_PATH/bin/packages"
+          GLOBAL_PACKAGES_PATH="$HOME/.local/share/Stride/NuGetDev"
 
-            <packageSourceMapping>
-              <!-- Look first in locally-built packages directory -->
-              <packageSource key="StrideDev Local">
-                <package pattern="Stride*" />
-                <package pattern="Stride.*" />
-              </packageSource>
-              <packageSource key="StrideDev Global">
-                <package pattern="Stride*" />
-                <package pattern="Stride.*" />
-              </packageSource>
-              <!-- Fallback to NuGet for anything else -->
-              <packageSource key="nuget.org">
-                <package pattern="Stride*" />
-                <package pattern="Stride.*" />
-                <package pattern="*" />
-              </packageSource>
-            </packageSourceMapping>
-          </configuration>
-          EOF
-          echo "NuGet.config created at $(pwd)/nuget.config"
+          echo "Creating nuget.config with:"
+          echo "  Local packages: $LOCAL_PACKAGES_PATH"
+          echo "  Global packages: $GLOBAL_PACKAGES_PATH"
+          echo "  Workspace: $WORKSPACE_PATH"
+
+          cat > nuget.config << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="StrideDev Local" value="$LOCAL_PACKAGES_PATH" />
+    <add key="StrideDev Global" value="$GLOBAL_PACKAGES_PATH" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+
+  <packageSourceMapping>
+    <!-- Look first in locally-built packages directory -->
+    <packageSource key="StrideDev Local">
+      <package pattern="Stride*" />
+      <package pattern="Stride.*" />
+    </packageSource>
+    <packageSource key="StrideDev Global">
+      <package pattern="Stride*" />
+      <package pattern="Stride.*" />
+    </packageSource>
+    <!-- Fallback to NuGet for anything else -->
+    <packageSource key="nuget.org">
+      <package pattern="Stride*" />
+      <package pattern="Stride.*" />
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+EOF
+
+          echo ""
+          echo "NuGet.config created:"
           cat nuget.config
       - name: Verify local package directory
         run: |
@@ -94,8 +105,17 @@ jobs:
             ls -lah ./bin/packages || echo "Directory exists but is empty or cannot list"
           else
             echo "WARNING: Local packages directory ./bin/packages does not exist yet"
+            echo "Creating directory..."
+            mkdir -p ./bin/packages
           fi
           echo "Current directory: $(pwd)"
+
+          # Also create the global packages directory if it doesn't exist
+          GLOBAL_PKG_DIR="$HOME/.local/share/Stride/NuGetDev"
+          if [ ! -d "$GLOBAL_PKG_DIR" ]; then
+            echo "Creating global packages directory: $GLOBAL_PKG_DIR"
+            mkdir -p "$GLOBAL_PKG_DIR"
+          fi
       - name: Build
         run: |
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
