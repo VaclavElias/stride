@@ -54,6 +54,15 @@ jobs:
           # Make strlcat_chk and strlcpy_chk non-fatal on Linux
           sed -i 's/#if !__has_builtin(__builtin___strlcat_chk)/#if !__has_builtin(__builtin___strlcat_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
           sed -i 's/#if !__has_builtin(__builtin___strlcpy_chk)/#if !__has_builtin(__builtin___strlcpy_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
+      - name: Configure NuGet Sources
+        run: |
+          # Add local package sources
+          dotnet nuget add source ./bin/packages --name "StrideDev Local"
+          dotnet nuget add source "$HOME/.local/share/Stride/NuGetDev" --name "StrideDev Global"
+
+          # List configured sources
+          echo "==== Configured NuGet Sources ===="
+          dotnet nuget list source
       - name: Build
         run: |
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
@@ -61,7 +70,8 @@ jobs:
             -v:m -p:WarningLevel=0 \
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
-            -p:StrideGraphicsApis=OpenGL
+            -p:StrideGraphicsApis=OpenGL \
+            -p:RestoreAdditionalProjectSources="./bin/packages;$HOME/.local/share/Stride/NuGetDev"
       - name: Inspect NuGet Local Sources (always)
         if: always()
         run: |
@@ -69,13 +79,13 @@ jobs:
           dotnet nuget list source || true
           echo
           echo "==== Working Directory ===="
-            pwd
+          pwd
           echo
           echo "==== StrideDev Local ./bin/packages ===="
           if [ -d ./bin/packages ]; then find ./bin/packages -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
           echo
           echo "==== StrideDev Global (%LOCALAPPDATA%/Stride/NuGetDev) ===="
-          LOCAL_NUGET_GLOBAL="${LOCALAPPDATA:-$HOME/.local/share}/Stride/NuGetDev"
+          LOCAL_NUGET_GLOBAL="$HOME/.local/share/Stride/NuGetDev"
           echo "Resolved path: $LOCAL_NUGET_GLOBAL"
           if [ -d "$LOCAL_NUGET_GLOBAL" ]; then find "$LOCAL_NUGET_GLOBAL" -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
       - name: Test
