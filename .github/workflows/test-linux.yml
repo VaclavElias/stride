@@ -66,33 +66,33 @@ jobs:
           echo "  Workspace: $WORKSPACE_PATH"
 
           cat > nuget.config << EOF
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <add key="StrideDev Local" value="$LOCAL_PACKAGES_PATH" />
-    <add key="StrideDev Global" value="$GLOBAL_PACKAGES_PATH" />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-  </packageSources>
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <add key="StrideDev Local" value="$LOCAL_PACKAGES_PATH" />
+              <add key="StrideDev Global" value="$GLOBAL_PACKAGES_PATH" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
 
-  <packageSourceMapping>
-    <!-- Look first in locally-built packages directory -->
-    <packageSource key="StrideDev Local">
-      <package pattern="Stride*" />
-      <package pattern="Stride.*" />
-    </packageSource>
-    <packageSource key="StrideDev Global">
-      <package pattern="Stride*" />
-      <package pattern="Stride.*" />
-    </packageSource>
-    <!-- Fallback to NuGet for anything else -->
-    <packageSource key="nuget.org">
-      <package pattern="Stride*" />
-      <package pattern="Stride.*" />
-      <package pattern="*" />
-    </packageSource>
-  </packageSourceMapping>
-</configuration>
-EOF
+            <packageSourceMapping>
+              <!-- Look first in locally-built packages directory -->
+              <packageSource key="StrideDev Local">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+              </packageSource>
+              <packageSource key="StrideDev Global">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+              </packageSource>
+              <!-- Fallback to NuGet for anything else -->
+              <packageSource key="nuget.org">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
 
           echo ""
           echo "NuGet.config created:"
