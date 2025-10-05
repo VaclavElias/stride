@@ -62,6 +62,22 @@ jobs:
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL
+      - name: Inspect NuGet Local Sources (always)
+        if: always()
+        run: |
+          echo "==== NuGet Sources (dotnet) ===="
+          dotnet nuget list source || true
+          echo
+          echo "==== Working Directory ===="
+            pwd
+          echo
+          echo "==== StrideDev Local ./bin/packages ===="
+          if [ -d ./bin/packages ]; then find ./bin/packages -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
+          echo
+          echo "==== StrideDev Global (%LOCALAPPDATA%/Stride/NuGetDev) ===="
+          LOCAL_NUGET_GLOBAL="${LOCALAPPDATA:-$HOME/.local/share}/Stride/NuGetDev"
+          echo "Resolved path: $LOCAL_NUGET_GLOBAL"
+          if [ -d "$LOCAL_NUGET_GLOBAL" ]; then find "$LOCAL_NUGET_GLOBAL" -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
       - name: Test
         run: |
           dotnet test build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
