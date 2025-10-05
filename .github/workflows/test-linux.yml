@@ -54,6 +54,48 @@ jobs:
           # Make strlcat_chk and strlcpy_chk non-fatal on Linux
           sed -i 's/#if !__has_builtin(__builtin___strlcat_chk)/#if !__has_builtin(__builtin___strlcat_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
           sed -i 's/#if !__has_builtin(__builtin___strlcpy_chk)/#if !__has_builtin(__builtin___strlcpy_chk) \&\& !defined(__linux__)/' deps/NativePath/NativePath.h
+      - name: Create NuGet.config for local packages
+        run: |
+          cat > nuget.config << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <add key="StrideDev Local" value="./bin/packages" />
+              <add key="StrideDev Global" value="$HOME/.local/share/Stride/NuGetDev" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+
+            <packageSourceMapping>
+              <!-- Look first in locally-built packages directory -->
+              <packageSource key="StrideDev Local">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+              </packageSource>
+              <packageSource key="StrideDev Global">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+              </packageSource>
+              <!-- Fallback to NuGet for anything else -->
+              <packageSource key="nuget.org">
+                <package pattern="Stride*" />
+                <package pattern="Stride.*" />
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          echo "NuGet.config created at $(pwd)/nuget.config"
+          cat nuget.config
+      - name: Verify local package directory
+        run: |
+          echo "Checking for local packages directory..."
+          if [ -d "./bin/packages" ]; then
+            echo "Local packages directory exists:"
+            ls -lah ./bin/packages || echo "Directory exists but is empty or cannot list"
+          else
+            echo "WARNING: Local packages directory ./bin/packages does not exist yet"
+          fi
+          echo "Current directory: $(pwd)"
       - name: Build
         run: |
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
@@ -62,6 +104,15 @@ jobs:
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL
+      - name: Verify packages after build
+        run: |
+          echo "Checking local packages after build..."
+          if [ -d "./bin/packages" ]; then
+            echo "Packages found:"
+            find ./bin/packages -name "*.nupkg" -type f
+          else
+            echo "Local packages directory still does not exist"
+          fi
       - name: Test
         run: |
           dotnet test build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
