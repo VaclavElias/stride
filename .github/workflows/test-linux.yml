@@ -58,20 +58,22 @@ jobs:
         run: |
           # Get absolute path to local packages
           LOCAL_PACKAGES_PATH="$(pwd)/bin/packages"
-          GLOBAL_PACKAGES_PATH="$HOME/.local/share/Stride/NuGetDev"
 
-          # Add local package sources with absolute paths
+          # Only add the local source (not the non-existent global one)
           dotnet nuget add source "$LOCAL_PACKAGES_PATH" --name "StrideDev Local"
-          dotnet nuget add source "$GLOBAL_PACKAGES_PATH" --name "StrideDev Global"
+
+          # Disable signature validation for restore (workaround for expired timestamping certificates)
+          export DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS=true
 
           # List configured sources
           echo "==== Configured NuGet Sources ===="
           dotnet nuget list source
       - name: Build
+        env:
+          DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS: true
         run: |
-          # Get absolute paths for restore sources
+          # Get absolute path for restore sources
           LOCAL_PACKAGES_PATH="$(pwd)/bin/packages"
-          GLOBAL_PACKAGES_PATH="$HOME/.local/share/Stride/NuGetDev"
 
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
             -restore -m:1 -nr:false \
@@ -79,7 +81,7 @@ jobs:
             -p:Configuration=${{ github.event.inputs.build-type || inputs.build-type }} \
             -p:StridePlatforms=Linux \
             -p:StrideGraphicsApis=OpenGL \
-            -p:RestoreAdditionalProjectSources=$LOCAL_PACKAGES_PATH:$GLOBAL_PACKAGES_PATH
+            -p:RestoreAdditionalProjectSources=$LOCAL_PACKAGES_PATH
       - name: Inspect NuGet Local Sources (always)
         if: always()
         run: |
@@ -91,12 +93,9 @@ jobs:
           echo
           echo "==== StrideDev Local ./bin/packages ===="
           if [ -d ./bin/packages ]; then find ./bin/packages -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
-          echo
-          echo "==== StrideDev Global (%LOCALAPPDATA%/Stride/NuGetDev) ===="
-          LOCAL_NUGET_GLOBAL="$HOME/.local/share/Stride/NuGetDev"
-          echo "Resolved path: $LOCAL_NUGET_GLOBAL"
-          if [ -d "$LOCAL_NUGET_GLOBAL" ]; then find "$LOCAL_NUGET_GLOBAL" -maxdepth 2 -type f -printf '%P\n' | head -200; else echo "Directory not found"; fi
       - name: Test
+        env:
+          DOTNET_CLI_ALLOW_TIMESTAMPING_ERRORS: true
         run: |
           dotnet test build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
             --no-build \
