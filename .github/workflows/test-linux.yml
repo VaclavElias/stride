@@ -68,7 +68,6 @@ jobs:
       #     dotnet nuget list source
       - name: Build
         run: |
-          # Get absolute path for restore sources
           dotnet build build/Stride.Tests.${{ github.event.inputs.test-category || inputs.test-category || 'Simple' }}.slnf \
             -restore -m:1 -nr:false \
             -v:m -p:WarningLevel=0 \
