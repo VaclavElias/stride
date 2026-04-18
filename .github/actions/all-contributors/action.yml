@@ -1,0 +1,61 @@
+name: All Contributors Updater
+description: Runs the repository-local .NET 10 all-contributors updater.
+
+inputs:
+  command:
+    description: Tool command to run (sync, add, or apply-commands)
+    required: true
+  repo-root:
+    description: Repository root passed to the updater
+    required: false
+    default: .
+  commands-file:
+    description: Path to a file containing /contributor add commands
+    required: false
+  login:
+    description: Contributor login for the add command
+    required: false
+  type:
+    description: Contribution type for the add command
+    required: false
+  github-token:
+    description: Optional GitHub token used to resolve contributor metadata
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Run all-contributors updater
+      shell: bash
+      env:
+        COMMAND: ${{ inputs.command }}
+        REPO_ROOT: ${{ inputs.repo-root }}
+        COMMANDS_FILE: ${{ inputs.commands-file }}
+        LOGIN: ${{ inputs.login }}
+        TYPE: ${{ inputs.type }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+        args=("$COMMAND" "--repo-root" "$REPO_ROOT")
+
+        if [ -n "$COMMANDS_FILE" ]; then
+          args+=("--commands-file" "$COMMANDS_FILE")
+        fi
+
+        if [ -n "$LOGIN" ]; then
+          args+=("--login" "$LOGIN")
+        fi
+
+        if [ -n "$TYPE" ]; then
+          args+=("--type" "$TYPE")
+        fi
+
+        if [ -n "$GITHUB_TOKEN" ]; then
+          args+=("--github-token" "$GITHUB_TOKEN")
+        fi
+
+        dotnet run "$GITHUB_WORKSPACE/build/AllContributors.cs" -- "${args[@]}"
