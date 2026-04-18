@@ -58,4 +58,4 @@ runs:
           args+=("--github-token" "$GITHUB_TOKEN")
         fi
 
-        dotnet run "$GITHUB_WORKSPACE/build/AllContributors.cs" -- "${args[@]}"
+        dotnet run "${GITHUB_WORKSPACE}/build/AllContributors.cs" -- "${args[@]}"
