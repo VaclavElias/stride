@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       commands:
-        description: One or more /contributor add commands to apply
+        description: Semicolon-separated contributors such as @user1 code; @user2 doc
         required: true
         type: string
       base-branch:
@@ -52,62 +52,78 @@ jobs:
 
       - name: Parse contributor commands
         id: metadata
-        shell: bash
+        shell: pwsh
         env:
+          TRIGGER_EVENT: ${{ github.event_name }}
           CONTRIBUTOR_COMMANDS: ${{ github.event_name == 'workflow_dispatch' && inputs.commands || github.event.comment.body }}
         run: |
-          printf '%s\n' "$CONTRIBUTOR_COMMANDS" > /tmp/all-contributors-commands.txt
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
+          $issueCommentPattern = '^\s*/contributor\s+add\s+@?(?<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?<types>[A-Za-z][A-Za-z0-9]*(?:,[A-Za-z][A-Za-z0-9]*)*)\s*$'
+          $workflowDispatchPattern = '^\s*(?:/contributor\s+add\s+)?@?(?<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?<types>[A-Za-z][A-Za-z0-9]*(?:,[A-Za-z][A-Za-z0-9]*)*)\s*$'
 
-          # Match `/contributor add @username type`. Test comment.
-          # GitHub usernames may be a single alphanumeric character, or for longer names they must start and end
-          # with an alphanumeric character and may contain hyphens only in the middle.
-          # Contribution types are limited to alphanumeric identifiers such as `code` or `doc`.
-          pattern = re.compile(r'^\s*/contributor\s+add\s+@?(?P<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?P<type>[A-Za-z][A-Za-z0-9]*)\s*$', re.IGNORECASE)
-          updates = {}
-          valid_commands = []
+          if ($env:TRIGGER_EVENT -eq 'workflow_dispatch') {
+            $entries = $env:CONTRIBUTOR_COMMANDS -split '\s*;\s*'
+            $pattern = $workflowDispatchPattern
+          }
+          else {
+            $entries = $env:CONTRIBUTOR_COMMANDS -split "`r?`n"
+            $pattern = $issueCommentPattern
+          }
 
-          for raw_line in Path('/tmp/all-contributors-commands.txt').read_text(encoding='utf-8').splitlines():
-              match = pattern.match(raw_line)
-              if not match:
-                  continue
+          $updates = [ordered]@{}
+          $validCommands = [System.Collections.Generic.List[string]]::new()
 
-              login = match.group('login')
-              contribution_type = match.group('type').lower()
-              types = updates.setdefault(login, [])
-              if contribution_type not in types:
-                  types.append(contribution_type)
-                  valid_commands.append(f'/contributor add @{login} {contribution_type}')
+          foreach ($entry in $entries) {
+            if ([string]::IsNullOrWhiteSpace($entry)) {
+              continue
+            }
 
-          users = list(updates)
-          if not users:
-              raise SystemExit('No valid contributor commands were found.')
+            $match = [System.Text.RegularExpressions.Regex]::Match($entry, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            if (-not $match.Success) {
+              continue
+            }
 
-          if len(users) == 1:
-              branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}'
-          else:
-              branch = f'all-contributors/update-{len(users)}-users-{os.environ["GITHUB_RUN_ID"]}'
-          mentions = ', '.join(f'@{user}' for user in users)
-          title = f'docs: add all-contributors entry for {mentions}' if len(users) == 1 else f'docs: add all-contributors entries for {mentions}'
+            $login = $match.Groups['login'].Value
+            if (-not $updates.Contains($login)) {
+              $updates[$login] = [System.Collections.Generic.List[string]]::new()
+            }
 
-          with open('/tmp/all-contributors-users.tsv', 'w', encoding='utf-8') as handle:
-              for login, types in updates.items():
-                  handle.write(f'{login}\t{",".join(types)}\n')
+            foreach ($contributionType in ($match.Groups['types'].Value -split ',')) {
+              $normalizedType = $contributionType.Trim().ToLowerInvariant()
+              if ([string]::IsNullOrWhiteSpace($normalizedType) -or $updates[$login].Contains($normalizedType)) {
+                continue
+              }
 
-          with open('/tmp/all-contributors-valid-commands.txt', 'w', encoding='utf-8') as handle:
-              handle.write('\n'.join(valid_commands))
-              handle.write('\n')
+              $updates[$login].Add($normalizedType)
+              $validCommands.Add("/contributor add @$login $normalizedType")
+            }
+          }
 
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
-              print(f'branch={branch}', file=handle)
-              print(f'title={title}', file=handle)
-          PY
+          if ($updates.Count -eq 0) {
+            throw 'No valid contributor commands were found.'
+          }
 
-          echo "Validated contributor updates:"
-          cat /tmp/all-contributors-users.tsv
+          $users = @($updates.Keys)
+          if ($users.Count -eq 1) {
+            $branch = "all-contributors/add-$($users[0])-$env:GITHUB_RUN_ID"
+            $title = "docs: add all-contributors entry for @$($users[0])"
+          }
+          else {
+            $branch = "all-contributors/update-$($users.Count)-users-$env:GITHUB_RUN_ID"
+            $mentions = ($users | ForEach-Object { "@$_" }) -join ', '
+            $title = "docs: add all-contributors entries for $mentions"
+          }
+
+          $userLines = foreach ($login in $updates.Keys) {
+            "$login`t$([string]::Join(',', $updates[$login]))"
+          }
+
+          Set-Content -Path /tmp/all-contributors-users.tsv -Value $userLines
+          Set-Content -Path /tmp/all-contributors-valid-commands.txt -Value $validCommands
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "branch=$branch"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "title=$title"
+
+          Write-Host 'Validated contributor updates:'
+          Get-Content /tmp/all-contributors-users.tsv | ForEach-Object { Write-Host $_ }
 
       - name: Update contributor files
         shell: bash
