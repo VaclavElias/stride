@@ -41,8 +41,6 @@ jobs:
     env:
       ALL_CONTRIBUTORS_VERSION: 6.26.1
       ALL_CONTRIBUTORS_CONFIG: .all-contributorsrc
-      ALL_CONTRIBUTORS_FILES: README.md
-      ALL_CONTRIBUTORS_PER_LINE: 7
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,10 +104,10 @@ jobs:
         shell: bash
         run: |
           while IFS=$'\t' read -r login contribution_types; do
-            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}" --files "${ALL_CONTRIBUTORS_FILES}" --contributorsPerLine "${ALL_CONTRIBUTORS_PER_LINE}"
+            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}"
           done < /tmp/all-contributors-users.tsv
 
-          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config "${ALL_CONTRIBUTORS_CONFIG}" --files "${ALL_CONTRIBUTORS_FILES}" --contributorsPerLine "${ALL_CONTRIBUTORS_PER_LINE}"
+          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config "${ALL_CONTRIBUTORS_CONFIG}"
 
       - name: Detect contributor file changes
         id: diff
