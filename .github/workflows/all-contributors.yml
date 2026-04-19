@@ -65,7 +65,7 @@ jobs:
           import re
           from pathlib import Path
 
-          # Match `/contributor add @username type`.
+          # Match `/contributor add @username type`. Test comment.
           # GitHub usernames may be a single alphanumeric character, or for longer names they must start and end
           # with an alphanumeric character and may contain hyphens only in the middle.
           # Contribution types are limited to alphanumeric identifiers such as `code` or `doc`.
