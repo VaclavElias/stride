@@ -62,7 +62,8 @@ jobs:
           import re
           from pathlib import Path
           
-          # Match `/contributor add @username type` with an optional `@`, GitHub-style logins, and alphanumeric contribution types.
+          # Match `/contributor add @username type`, where the login follows GitHub username rules
+          # (alphanumeric start/end, hyphens only in the middle) and the contribution type is alphanumeric.
           pattern = re.compile(r'^\s*/contributor\s+add\s+@?(?P<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?P<type>[A-Za-z][A-Za-z0-9]*)\s*$', re.IGNORECASE)
           updates = {}
           valid_commands = []

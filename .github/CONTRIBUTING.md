@@ -10,17 +10,17 @@ You can help us translate Stride; check out our [Localization Guide](https://doc
 
 ## Contributor acknowledgements
 
-Maintainers can update `.all-contributorsrc` and regenerate the `README.md` contributor table with the upstream `all-contributors-cli`:
+Maintainers can update `.all-contributorsrc` and regenerate the `README.md` contributor table with the upstream `all-contributors-cli`. Use the same pinned version as in `/home/runner/work/stride/stride/.github/workflows/all-contributors.yml`:
 
 ```bash
-npx --yes all-contributors-cli@6.26.1 generate --config .all-contributorsrc
+npx --yes all-contributors-cli@<version> generate --config .all-contributorsrc
 ```
 
 To add one or more contributors locally, run:
 
 ```bash
-npx --yes all-contributors-cli@6.26.1 add user1 code --config .all-contributorsrc
-npx --yes all-contributors-cli@6.26.1 add user2 doc --config .all-contributorsrc
+npx --yes all-contributors-cli@<version> add user1 code --config .all-contributorsrc
+npx --yes all-contributors-cli@<version> add user2 doc --config .all-contributorsrc
 ```
 
 The **All Contributors** workflow accepts explicit line-based commands through **Run workflow**:
