@@ -1,9 +1,6 @@
 name: All Contributors
 
 on:
-  push:
-    branches:
-      - copilot/feature-automated-all-contributors-updates
   workflow_dispatch:
     inputs:
       commands:
