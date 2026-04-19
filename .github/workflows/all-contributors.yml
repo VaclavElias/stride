@@ -1,6 +1,9 @@
 name: All Contributors
 
 on:
+  push:
+    branches:
+      - copilot/feature-automated-all-contributors-updates
   workflow_dispatch:
     inputs:
       commands:
@@ -61,7 +64,7 @@ jobs:
           import os
           import re
           from pathlib import Path
-          
+
           # Match `/contributor add @username type`.
           # GitHub usernames may be a single alphanumeric character, or for longer names they must start and end
           # with an alphanumeric character and may contain hyphens only in the middle.
