@@ -265,6 +265,17 @@ Thanks to all these wonderful people who have contributed to Stride!
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Acissathar"><img src="https://avatars.githubusercontent.com/u/10227954?v=4?s=100" width="100px;" alt="Will"/><br /><sub><b>Will</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Acissathar" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rmtttt"><img src="https://avatars.githubusercontent.com/u/4866130?v=4?s=100" width="100px;" alt="Alexander Shaliapin"/><br /><sub><b>Alexander Shaliapin</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=rmtttt" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MsEpsilon"><img src="https://avatars.githubusercontent.com/u/187624379?v=4?s=100" width="100px;" alt="MsEpsilon"/><br /><sub><b>MsEpsilon</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=MsEpsilon" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kjnorris1205"><img src="https://avatars.githubusercontent.com/u/18292540?v=4?s=100" width="100px;" alt="Kevin Norris"/><br /><sub><b>Kevin Norris</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=kjnorris1205" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Redwarx008"><img src="https://avatars.githubusercontent.com/u/50837890?v=4?s=100" width="100px;" alt="Redwarx008"/><br /><sub><b>Redwarx008</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=Redwarx008" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://christianbaum.com/"><img src="https://avatars.githubusercontent.com/u/5328618?v=4?s=100" width="100px;" alt="Christian Michael Baum"/><br /><sub><b>Christian Michael Baum</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=xianbaum" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/luca-domenichini"><img src="https://avatars.githubusercontent.com/u/14213760?v=4?s=100" width="100px;" alt="Luca Domenichini"/><br /><sub><b>Luca Domenichini</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=luca-domenichini" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rafzi"><img src="https://avatars.githubusercontent.com/u/7032201?v=4?s=100" width="100px;" alt="Rafael Stahl"/><br /><sub><b>Rafael Stahl</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=rafzi" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/steveberdy"><img src="https://avatars.githubusercontent.com/u/86739818?v=4?s=100" width="100px;" alt="Steve"/><br /><sub><b>Steve</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=steveberdy" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://ds5678.github.io/"><img src="https://avatars.githubusercontent.com/u/49847914?v=4?s=100" width="100px;" alt="Jeremy Pritts"/><br /><sub><b>Jeremy Pritts</b></sub></a><br /><a href="https://github.com/stride3d/stride/commits?author=ds5678" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
