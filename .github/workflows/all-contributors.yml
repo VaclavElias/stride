@@ -62,8 +62,9 @@ jobs:
           import re
           from pathlib import Path
           
-          # Match `/contributor add @username type`, where the login follows GitHub username rules
-          # (alphanumeric start/end, hyphens only in the middle) and the contribution type is alphanumeric.
+          # Match `/contributor add @username type`.
+          # GitHub usernames must start and end with an alphanumeric character, with hyphens allowed only in the middle.
+          # Contribution types are limited to alphanumeric identifiers such as `code` or `doc`.
           pattern = re.compile(r'^\s*/contributor\s+add\s+@?(?P<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?P<type>[A-Za-z][A-Za-z0-9]*)\s*$', re.IGNORECASE)
           updates = {}
           valid_commands = []
@@ -84,7 +85,10 @@ jobs:
           if not users:
               raise SystemExit('No valid contributor commands were found.')
 
-          branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}' if len(users) == 1 else f'all-contributors/update-{len(users)}-users-{os.environ["GITHUB_RUN_ID"]}'
+          if len(users) == 1:
+              branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}'
+          else:
+              branch = f'all-contributors/update-{len(users)}-users-{os.environ["GITHUB_RUN_ID"]}'
           mentions = ', '.join(f'@{user}' for user in users)
           title = f'docs: add all-contributors entry for {mentions}' if len(users) == 1 else f'docs: add all-contributors entries for {mentions}'
 
