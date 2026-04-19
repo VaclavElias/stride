@@ -40,6 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ALL_CONTRIBUTORS_VERSION: 6.26.1
+      ALL_CONTRIBUTORS_CONFIG: .all-contributorsrc
+      ALL_CONTRIBUTORS_FILES: README.md
+      ALL_CONTRIBUTORS_PER_LINE: 7
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,7 +63,8 @@ jobs:
           import os
           import re
           from pathlib import Path
-
+          
+          # Match `/contributor add @username type` with an optional `@`, GitHub-style logins, and alphanumeric contribution types.
           pattern = re.compile(r'^\s*/contributor\s+add\s+@?(?P<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?P<type>[A-Za-z][A-Za-z0-9]*)\s*$', re.IGNORECASE)
           updates = {}
           valid_commands = []
@@ -81,7 +85,7 @@ jobs:
           if not users:
               raise SystemExit('No valid contributor commands were found.')
 
-          branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}'
+          branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}' if len(users) == 1 else f'all-contributors/update-{len(users)}-users-{os.environ["GITHUB_RUN_ID"]}'
           mentions = ', '.join(f'@{user}' for user in users)
           title = f'docs: add all-contributors entry for {mentions}' if len(users) == 1 else f'docs: add all-contributors entries for {mentions}'
 
@@ -102,10 +106,10 @@ jobs:
         shell: bash
         run: |
           while IFS=$'\t' read -r login contribution_types; do
-            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config .all-contributorsrc --files README.md --contributorsPerLine 7
+            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}" --files "${ALL_CONTRIBUTORS_FILES}" --contributorsPerLine "${ALL_CONTRIBUTORS_PER_LINE}"
           done < /tmp/all-contributors-users.tsv
 
-          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config .all-contributorsrc --files README.md --contributorsPerLine 7
+          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config "${ALL_CONTRIBUTORS_CONFIG}" --files "${ALL_CONTRIBUTORS_FILES}" --contributorsPerLine "${ALL_CONTRIBUTORS_PER_LINE}"
 
       - name: Detect contributor file changes
         id: diff
