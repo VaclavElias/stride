@@ -10,26 +10,27 @@ You can help us translate Stride; check out our [Localization Guide](https://doc
 
 ## Contributor acknowledgements
 
-Maintainers can update `.all-contributorsrc` and regenerate the `README.md` contributor table with the repository-local .NET 10 file-based tool:
+Maintainers can update `.all-contributorsrc` and regenerate the `README.md` contributor table with the upstream `all-contributors-cli`:
 
 ```bash
-dotnet run build/AllContributors.cs -- sync --repo-root .
+npx --yes all-contributors-cli@6.26.1 generate --config .all-contributorsrc --files README.md --contributorsPerLine 7
 ```
 
-To apply one or more structured contributor commands locally, place them in a file and run:
+To add one or more contributors locally, run:
 
 ```bash
-dotnet run build/AllContributors.cs -- apply-commands --repo-root . --commands-file /tmp/all-contributors.txt
+npx --yes all-contributors-cli@6.26.1 add user1 code --config .all-contributorsrc --files README.md --contributorsPerLine 7
+npx --yes all-contributors-cli@6.26.1 add user2 doc --config .all-contributorsrc --files README.md --contributorsPerLine 7
 ```
 
-Supported commands are explicit and line-based:
+The **All Contributors** workflow accepts explicit line-based commands through **Run workflow**:
 
 ```text
 /contributor add @user1 code
 /contributor add @user2 doc
 ```
 
-The **All Contributors** workflow accepts the same multiline input through **Run workflow**, and it also listens for maintainer issue comments with the same syntax. Successful runs open a pull request from an `all-contributors/add-Username` branch.
+The workflow also listens for maintainer comments on issue `#1226` with the same syntax. It uses the official CLI to update the files, pushes a branch, and opens a pull request with GitHub CLI.
 
 ## Earn Money by Contributing
 

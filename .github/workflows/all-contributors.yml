@@ -29,6 +29,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
+        github.event.issue.number == 1226 &&
         contains(github.event.comment.body, '/contributor add ') &&
         (
           github.event.comment.author_association == 'OWNER' ||
@@ -37,72 +38,74 @@ jobs:
         )
       )
     runs-on: ubuntu-latest
+    env:
+      ALL_CONTRIBUTORS_VERSION: 6.26.1
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.base-branch || github.event.repository.default_branch }}
-          fetch-depth: 0
 
-      - name: Capture contributor commands
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Parse contributor commands
+        id: metadata
         shell: bash
         env:
           CONTRIBUTOR_COMMANDS: ${{ github.event_name == 'workflow_dispatch' && inputs.commands || github.event.comment.body }}
         run: |
           printf '%s\n' "$CONTRIBUTOR_COMMANDS" > /tmp/all-contributors-commands.txt
-
-      - name: Update contributor files
-        uses: ./.github/actions/all-contributors
-        with:
-          command: apply-commands
-          repo-root: ${{ github.workspace }}
-          commands-file: /tmp/all-contributors-commands.txt
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build branch and PR metadata
-        id: metadata
-        shell: bash
-        run: |
           python - <<'PY'
           import os
+          import re
           from pathlib import Path
 
-          users = []
-          seen = set()
-          for line in Path('/tmp/all-contributors-commands.txt').read_text().splitlines():
-              parts = line.strip().split()
-              if len(parts) != 4:
+          pattern = re.compile(r'^\s*/contributor\s+add\s+@?(?P<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?P<type>[A-Za-z][A-Za-z0-9]*)\s*$', re.IGNORECASE)
+          updates = {}
+          valid_commands = []
+
+          for raw_line in Path('/tmp/all-contributors-commands.txt').read_text(encoding='utf-8').splitlines():
+              match = pattern.match(raw_line)
+              if not match:
                   continue
 
-              command, action, user, contribution_type = parts
-              if command.lower() != '/contributor' or action.lower() != 'add':
-                  continue
+              login = match.group('login')
+              contribution_type = match.group('type').lower()
+              types = updates.setdefault(login, [])
+              if contribution_type not in types:
+                  types.append(contribution_type)
+                  valid_commands.append(f'/contributor add @{login} {contribution_type}')
 
-              user = user.removeprefix('@')
-              if not user or not user[0].isalnum() or not user[-1].isalnum():
-                  continue
-
-              if not all(character.isalnum() or character == '-' for character in user):
-                  continue
-
-              if not contribution_type or not contribution_type[0].isalpha() or not contribution_type.isalnum():
-                  continue
-
-              user_key = user.lower()
-              if user_key not in seen:
-                  seen.add(user_key)
-                  users.append(user)
-
+          users = list(updates)
           if not users:
               raise SystemExit('No valid contributor commands were found.')
 
-          branch = f'all-contributors/add-{users[0]}'
+          branch = f'all-contributors/add-{users[0]}-{os.environ["GITHUB_RUN_ID"]}'
           mentions = ', '.join(f'@{user}' for user in users)
           title = f'docs: add all-contributors entry for {mentions}' if len(users) == 1 else f'docs: add all-contributors entries for {mentions}'
+
+          with open('/tmp/all-contributors-users.tsv', 'w', encoding='utf-8') as handle:
+              for login, types in updates.items():
+                  handle.write(f'{login}\t{",".join(types)}\n')
+
+          with open('/tmp/all-contributors-valid-commands.txt', 'w', encoding='utf-8') as handle:
+              handle.write('\n'.join(valid_commands))
+              handle.write('\n')
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
               print(f'branch={branch}', file=handle)
               print(f'title={title}', file=handle)
           PY
+
+      - name: Update contributor files
+        shell: bash
+        run: |
+          while IFS=$'\t' read -r login contribution_types; do
+            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config .all-contributorsrc --files README.md --contributorsPerLine 7
+          done < /tmp/all-contributors-users.tsv
+
+          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config .all-contributorsrc --files README.md --contributorsPerLine 7
 
       - name: Detect contributor file changes
         id: diff
@@ -117,18 +120,34 @@ jobs:
 
       - name: Create contributor pull request
         if: steps.diff.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.metadata.outputs.branch }}
-          base: ${{ github.event_name == 'workflow_dispatch' && inputs.base-branch || github.event.repository.default_branch }}
-          delete-branch: true
-          commit-message: ${{ steps.metadata.outputs.title }}
-          title: ${{ steps.metadata.outputs.title }}
-          body: |
-            Automated all-contributors update generated by `${{ github.workflow }}`.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.base-branch || github.event.repository.default_branch }}
+          PR_BRANCH: ${{ steps.metadata.outputs.branch }}
+          PR_TITLE: ${{ steps.metadata.outputs.title }}
+          TRIGGER_SOURCE: ${{ github.event_name == 'workflow_dispatch' && 'workflow_dispatch' || format('issue #{0}', github.event.issue.number) }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$PR_BRANCH"
+          git add README.md .all-contributorsrc
+          git commit -m "$PR_TITLE"
+          git push --set-upstream origin "$PR_BRANCH"
 
-            Commands:
-            ```text
-            ${{ github.event_name == 'workflow_dispatch' && inputs.commands || github.event.comment.body }}
-            ```
+          cat > /tmp/all-contributors-pr-body.md <<EOF
+          Automated all-contributors update using \`all-contributors-cli\`.
+
+          Trigger source: $TRIGGER_SOURCE
+
+          Commands:
+          \`\`\`text
+          $(cat /tmp/all-contributors-valid-commands.txt)
+          \`\`\`
+          EOF
+
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$PR_BRANCH" \
+            --title "$PR_TITLE" \
+            --body-file /tmp/all-contributors-pr-body.md
