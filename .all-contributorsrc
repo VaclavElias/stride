@@ -770,6 +770,24 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "kjnorris1205",
+      "name": "Kevin Norris",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18292540?v=4",
+      "profile": "https://github.com/kjnorris1205",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "MsEpsilon",
+      "name": "MsEpsilon",
+      "avatar_url": "https://avatars.githubusercontent.com/u/187624379?v=4",
+      "profile": "https://github.com/MsEpsilon",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
