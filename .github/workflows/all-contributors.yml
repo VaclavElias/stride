@@ -106,11 +106,15 @@ jobs:
               print(f'title={title}', file=handle)
           PY
 
+          echo "Validated contributor updates:"
+          cat /tmp/all-contributors-users.tsv
+
       - name: Update contributor files
         shell: bash
         run: |
           while IFS=$'\t' read -r login contribution_types; do
-            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}"
+            echo "Adding @$login with contributions: $contribution_types"
+            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}" < /dev/null
           done < /tmp/all-contributors-users.tsv
 
           npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config "${ALL_CONTRIBUTORS_CONFIG}"
