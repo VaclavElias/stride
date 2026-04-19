@@ -57,6 +57,7 @@ jobs:
           TRIGGER_EVENT: ${{ github.event_name }}
           CONTRIBUTOR_COMMANDS: ${{ github.event_name == 'workflow_dispatch' && inputs.commands || github.event.comment.body }}
         run: |
+          $maxUsersInTitle = 3
           $issueCommentPattern = '^\s*/contributor\s+add\s+@?(?<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?<types>[A-Za-z][A-Za-z0-9]*(?:,[A-Za-z][A-Za-z0-9]*)*)\s*$'
           $workflowDispatchPattern = '^\s*(?:/contributor\s+add\s+)?@?(?<login>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)\s+(?<types>[A-Za-z][A-Za-z0-9]*(?:,[A-Za-z][A-Za-z0-9]*)*)\s*$'
 
@@ -109,8 +110,13 @@ jobs:
           }
           else {
             $branch = "all-contributors/update-$($users.Count)-users-$env:GITHUB_RUN_ID"
-            $mentions = ($users | ForEach-Object { "@$_" }) -join ', '
-            $title = "docs: add all-contributors entries for $mentions"
+            if ($users.Count -le $maxUsersInTitle) {
+              $mentions = ($users | ForEach-Object { "@$_" }) -join ', '
+              $title = "docs: add all-contributors entries for $mentions"
+            }
+            else {
+              $title = "docs: add all-contributors entries for $($users.Count) users"
+            }
           }
 
           $userLines = foreach ($login in $updates.Keys) {
@@ -126,14 +132,19 @@ jobs:
           Get-Content /tmp/all-contributors-users.tsv | ForEach-Object { Write-Host $_ }
 
       - name: Update contributor files
-        shell: bash
+        shell: pwsh
         run: |
-          while IFS=$'\t' read -r login contribution_types; do
-            echo "Adding @$login with contributions: $contribution_types"
-            npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} add "$login" "$contribution_types" --config "${ALL_CONTRIBUTORS_CONFIG}" < /dev/null
-          done < /tmp/all-contributors-users.tsv
+          foreach ($line in Get-Content /tmp/all-contributors-users.tsv) {
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              continue
+            }
 
-          npx --yes all-contributors-cli@${ALL_CONTRIBUTORS_VERSION} generate --config "${ALL_CONTRIBUTORS_CONFIG}"
+            $login, $contributionTypes = $line -split "`t", 2
+            Write-Host "Adding @$login with contributions: $contributionTypes"
+            npx --yes "all-contributors-cli@$env:ALL_CONTRIBUTORS_VERSION" add $login $contributionTypes --config $env:ALL_CONTRIBUTORS_CONFIG
+          }
+
+          npx --yes "all-contributors-cli@$env:ALL_CONTRIBUTORS_VERSION" generate --config $env:ALL_CONTRIBUTORS_CONFIG
 
       - name: Detect contributor file changes
         id: diff
