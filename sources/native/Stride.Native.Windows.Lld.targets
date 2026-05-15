@@ -47,30 +47,15 @@
 
     <ItemGroup>
       <_StrideNativeWindowsX64MsvcLibFile Include="C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\x64\MSVCRT.lib" />
-      <_StrideNativeWindowsX64UcrtLibFile Include="C:\Program Files (x86)\Windows Kits\10\Lib\*\ucrt\x64\ucrt.lib" />
-      <_StrideNativeWindowsX64UmLibFile Include="C:\Program Files (x86)\Windows Kits\10\Lib\*\um\x64\kernel32.lib" />
-      <_StrideNativeWindowsX64LibPath Include="$(VCToolsInstallDir)lib\x64" Condition="'$(VCToolsInstallDir)' != '' And Exists('$(VCToolsInstallDir)lib\x64\MSVCRT.lib')" />
-      <_StrideNativeWindowsX64LibPath Include="$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\ucrt\x64" Condition="'$(WindowsSdkDir)' != '' And '$(WindowsTargetPlatformVersion)' != '' And Exists('$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\ucrt\x64\ucrt.lib')" />
-      <_StrideNativeWindowsX64LibPath Include="$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\x64" Condition="'$(WindowsSdkDir)' != '' And '$(WindowsTargetPlatformVersion)' != '' And Exists('$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\x64\kernel32.lib')" />
       <_StrideNativeWindowsX64LibPath Include="%(_StrideNativeWindowsX64MsvcLibFile.RootDir)%(_StrideNativeWindowsX64MsvcLibFile.Directory)" />
-      <_StrideNativeWindowsX64LibPath Include="%(_StrideNativeWindowsX64UcrtLibFile.RootDir)%(_StrideNativeWindowsX64UcrtLibFile.Directory)" />
-      <_StrideNativeWindowsX64LibPath Include="%(_StrideNativeWindowsX64UmLibFile.RootDir)%(_StrideNativeWindowsX64UmLibFile.Directory)" />
     </ItemGroup>
 
     <!-- Debug: Show what libraries are being linked -->
     <Message Text="[Stride] Linking libraries: libNativePath.lib $(StrideNativePathLibsWindows)" Importance="high" />
     <Message Text="[Stride] Object files: @(StrideNativeCFile->'$(OutputObjectPath)\win-x64\%(Filename).obj')" Importance="high" />
-    <Message Text="[Stride] VCToolsInstallDir: $(VCToolsInstallDir)" Importance="high" />
-    <Message Text="[Stride] WindowsSdkDir: $(WindowsSdkDir)" Importance="high" />
-    <Message Text="[Stride] WindowsTargetPlatformVersion: $(WindowsTargetPlatformVersion)" Importance="high" />
-    <Message Text="[Stride] Discovered MSVC lib files x64: @(_StrideNativeWindowsX64MsvcLibFile)" Importance="high" />
-    <Message Text="[Stride] Discovered Windows SDK UCRT lib files x64: @(_StrideNativeWindowsX64UcrtLibFile)" Importance="high" />
-    <Message Text="[Stride] Discovered Windows SDK UM lib files x64: @(_StrideNativeWindowsX64UmLibFile)" Importance="high" />
-    <Message Text="[Stride] LIB: $(LIB)" Importance="high" />
-    <Message Text="[Stride] LLD lib paths x64: @(_StrideNativeWindowsX64LibPath)" Importance="high" />
 
     <!-- Link DLL using Clang driver with LLD -->
-    <Exec Command="&quot;$(StrideNativeClangCommand)&quot; -shared -fuse-ld=lld -target x86_64-pc-windows-msvc -o &quot;$(StrideNativeOutputPath)\runtimes\win-x64\native\$(StrideNativeOutputName).dll&quot; -Wl,-subsystem:windows -Wl,-nxcompat @(_StrideNativeWindowsX64LibPath->'-Wl,/libpath:&quot;%(Identity)\.&quot;', ' ') -L&quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-x64&quot; @(StrideNativeCFile->'&quot;$(OutputObjectPath)\win-x64\%(Filename).obj&quot;', ' ') &quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-x64\libNativePath.lib&quot; &quot;$(StrideNativePathLibsWindows_x64)&quot; -lkernel32 -luser32 -lole32 -loleaut32 -luuid -ladvapi32 -lshell32" 
+    <Exec Command="&quot;$(StrideNativeClangCommand)&quot; -shared -fuse-ld=lld -target x86_64-pc-windows-msvc -o &quot;$(StrideNativeOutputPath)\runtimes\win-x64\native\$(StrideNativeOutputName).dll&quot; -Wl,-subsystem:windows -Wl,-nxcompat @(_StrideNativeWindowsX64LibPath->'-Wl,/libpath:&quot;%(Identity)\.&quot;', ' ') -L&quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-x64&quot; @(StrideNativeCFile->'&quot;$(OutputObjectPath)\win-x64\%(Filename).obj&quot;', ' ') &quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-x64\libNativePath.lib&quot; &quot;$(StrideNativePathLibsWindows_x64)&quot; -lkernel32 -luser32 -lole32 -loleaut32 -luuid -ladvapi32 -lshell32"
           ContinueOnError="false" />
 
     <Message Text="[Stride] Linked $(StrideNativeOutputName).dll for Windows x64" Importance="normal" />
@@ -114,30 +99,15 @@
 
     <ItemGroup>
       <_StrideNativeWindowsArm64MsvcLibFile Include="C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\lib\arm64\MSVCRT.lib" />
-      <_StrideNativeWindowsArm64UcrtLibFile Include="C:\Program Files (x86)\Windows Kits\10\Lib\*\ucrt\arm64\ucrt.lib" />
-      <_StrideNativeWindowsArm64UmLibFile Include="C:\Program Files (x86)\Windows Kits\10\Lib\*\um\arm64\kernel32.lib" />
-      <_StrideNativeWindowsArm64LibPath Include="$(VCToolsInstallDir)lib\arm64" Condition="'$(VCToolsInstallDir)' != '' And Exists('$(VCToolsInstallDir)lib\arm64\MSVCRT.lib')" />
-      <_StrideNativeWindowsArm64LibPath Include="$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\ucrt\arm64" Condition="'$(WindowsSdkDir)' != '' And '$(WindowsTargetPlatformVersion)' != '' And Exists('$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\ucrt\arm64\ucrt.lib')" />
-      <_StrideNativeWindowsArm64LibPath Include="$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\arm64" Condition="'$(WindowsSdkDir)' != '' And '$(WindowsTargetPlatformVersion)' != '' And Exists('$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\um\arm64\kernel32.lib')" />
       <_StrideNativeWindowsArm64LibPath Include="%(_StrideNativeWindowsArm64MsvcLibFile.RootDir)%(_StrideNativeWindowsArm64MsvcLibFile.Directory)" />
-      <_StrideNativeWindowsArm64LibPath Include="%(_StrideNativeWindowsArm64UcrtLibFile.RootDir)%(_StrideNativeWindowsArm64UcrtLibFile.Directory)" />
-      <_StrideNativeWindowsArm64LibPath Include="%(_StrideNativeWindowsArm64UmLibFile.RootDir)%(_StrideNativeWindowsArm64UmLibFile.Directory)" />
     </ItemGroup>
-    
+
     <!-- Debug: Show what libraries are being linked -->
     <Message Text="[Stride] Linking libraries: libNativePath.lib $(StrideNativePathLibsWindows)" Importance="high" />
     <Message Text="[Stride] Object files: @(StrideNativeCFile->'$(OutputObjectPath)\win-arm64\%(Filename).obj')" Importance="high" />
-    <Message Text="[Stride] VCToolsInstallDir: $(VCToolsInstallDir)" Importance="high" />
-    <Message Text="[Stride] WindowsSdkDir: $(WindowsSdkDir)" Importance="high" />
-    <Message Text="[Stride] WindowsTargetPlatformVersion: $(WindowsTargetPlatformVersion)" Importance="high" />
-    <Message Text="[Stride] Discovered MSVC lib files ARM64: @(_StrideNativeWindowsArm64MsvcLibFile)" Importance="high" />
-    <Message Text="[Stride] Discovered Windows SDK UCRT lib files ARM64: @(_StrideNativeWindowsArm64UcrtLibFile)" Importance="high" />
-    <Message Text="[Stride] Discovered Windows SDK UM lib files ARM64: @(_StrideNativeWindowsArm64UmLibFile)" Importance="high" />
-    <Message Text="[Stride] LIB: $(LIB)" Importance="high" />
-    <Message Text="[Stride] LLD lib paths ARM64: @(_StrideNativeWindowsArm64LibPath)" Importance="high" />
-    
+
     <!-- Link DLL using Clang driver with LLD (MinGW target to avoid CRT conflicts) -->
-    <Exec Command="&quot;$(StrideNativeClangCommand)&quot; -shared -fuse-ld=lld -target aarch64-pc-windows-msvc -o &quot;$(StrideNativeOutputPath)\runtimes\win-arm64\native\$(StrideNativeOutputName).dll&quot; -Wl,-subsystem:windows -Wl,-nxcompat @(_StrideNativeWindowsArm64LibPath->'-Wl,/libpath:&quot;%(Identity)\.&quot;', ' ') -L&quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-arm64&quot; @(StrideNativeCFile->'&quot;$(OutputObjectPath)\win-arm64\%(Filename).obj&quot;', ' ') &quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-arm64\libNativePath.lib&quot; &quot;$(StrideNativePathLibsWindowsArm64)&quot; -lkernel32 -luser32 -lole32 -loleaut32 -luuid -ladvapi32 -lshell32" 
+    <Exec Command="&quot;$(StrideNativeClangCommand)&quot; -shared -fuse-ld=lld -target aarch64-pc-windows-msvc -o &quot;$(StrideNativeOutputPath)\runtimes\win-arm64\native\$(StrideNativeOutputName).dll&quot; -Wl,-subsystem:windows -Wl,-nxcompat @(_StrideNativeWindowsArm64LibPath->'-Wl,/libpath:&quot;%(Identity)\.&quot;', ' ') -L&quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-arm64&quot; @(StrideNativeCFile->'&quot;$(OutputObjectPath)\win-arm64\%(Filename).obj&quot;', ' ') &quot;$(MSBuildThisFileDirectory)..\..\deps\NativePath\dotnet\win-arm64\libNativePath.lib&quot; &quot;$(StrideNativePathLibsWindowsArm64)&quot; -lkernel32 -luser32 -lole32 -loleaut32 -luuid -ladvapi32 -lshell32"
           ContinueOnError="false" />
     
     <Message Text="[Stride] Linked $(StrideNativeOutputName).dll for Windows ARM64" Importance="normal" />
