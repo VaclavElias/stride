@@ -51,6 +51,7 @@
     </ItemGroup>
 
     <!-- Debug: Show what libraries are being linked -->
+    <Message Text="[Stride] VCToolsInstallDir: $(VCToolsInstallDir)" Importance="high" />
     <Message Text="[Stride] Linking libraries: libNativePath.lib $(StrideNativePathLibsWindows)" Importance="high" />
     <Message Text="[Stride] Object files: @(StrideNativeCFile->'$(OutputObjectPath)\win-x64\%(Filename).obj')" Importance="high" />
 
