@@ -1,0 +1,116 @@
+name: "Release Notes: Test New Contributors section"
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: Target release tag for generate-notes (tag_name)
+        required: true
+        type: string
+      from:
+        description: Previous release tag for generate-notes (previous_tag_name)
+        required: true
+        type: string
+      repo:
+        description: Repository in owner/name format
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  test-new-contributors:
+    name: Test New Contributors extraction
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Generate and extract New Contributors
+        id: extract
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TO: ${{ inputs.to }}
+          INPUT_FROM: ${{ inputs.from }}
+          INPUT_REPO: ${{ inputs.repo }}
+          DEFAULT_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          REPO="${INPUT_REPO:-$DEFAULT_REPO}"
+          TO="$INPUT_TO"
+          FROM="$INPUT_FROM"
+
+          OUT_DIR="$PWD/new-contributors-debug"
+          mkdir -p "$OUT_DIR"
+
+          {
+            echo "repo=$REPO"
+            echo "to=$TO"
+            echo "from=$FROM"
+          } > "$OUT_DIR/inputs.txt"
+
+          echo "Calling GitHub generate-notes for $REPO ($FROM..$TO)"
+
+          set +e
+          gh api --method POST "repos/$REPO/releases/generate-notes" \
+            -f tag_name="$TO" \
+            -f previous_tag_name="$FROM" \
+            --jq '.body' \
+            > "$OUT_DIR/generated-body.md" \
+            2> "$OUT_DIR/gh-stderr.log"
+          GH_STATUS=$?
+          set -e
+
+          echo "gh-exit-code=$GH_STATUS" >> "$GITHUB_OUTPUT"
+
+          if [ "$GH_STATUS" -ne 0 ]; then
+            echo "::error::gh api failed with exit code $GH_STATUS"
+            cat "$OUT_DIR/gh-stderr.log"
+            exit 1
+          fi
+
+          awk '
+            /^## New Contributors/ { c=1 }
+            c && /^\*\*Full Changelog/ { exit }
+            c && /^## / && !/^## New Contributors/ { exit }
+            c { print }
+          ' "$OUT_DIR/generated-body.md" > "$OUT_DIR/new-contributors-extracted.md"
+
+          if [ -s "$OUT_DIR/new-contributors-extracted.md" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::New Contributors section extracted."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No New Contributors section found in generated notes body."
+          fi
+
+      - name: Publish summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          {
+            echo "## New Contributors extraction test"
+            echo ""
+            echo "- gh exit code: ${{ steps.extract.outputs.gh-exit-code }}"
+            echo "- section found: ${{ steps.extract.outputs.found || 'false' }}"
+            echo ""
+            echo "### Extracted section"
+            echo ""
+            if [ -s "$PWD/new-contributors-debug/new-contributors-extracted.md" ]; then
+              cat "$PWD/new-contributors-debug/new-contributors-extracted.md"
+            else
+              echo "(empty)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload debug artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: new-contributors-debug
+          path: new-contributors-debug
