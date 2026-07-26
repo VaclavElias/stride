@@ -22,7 +22,7 @@ jobs:
     name: Test New Contributors extraction
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
