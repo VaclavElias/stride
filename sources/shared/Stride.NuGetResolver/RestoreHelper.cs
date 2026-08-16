@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -215,8 +216,70 @@ namespace Stride.Core.Assets
             return libPaths;
         }
 
+        /// <summary>
+        ///   Maps a possibly distro- or version-specific RID onto the portable RID that packages
+        ///   actually ship assets for, or returns it unchanged when no mapping is known.
+        /// </summary>
+        /// <remarks>
+        ///   <para>
+        ///     <see cref="RuntimeInformation.RuntimeIdentifier"/> reports the RID the host was built for,
+        ///     which on many Linux distributions is specific (<c>ubuntu.24.04-x64</c>) and on macOS can be
+        ///     version-qualified (<c>osx.14-arm64</c>). Packages ship their natives under portable RIDs
+        ///     only - <c>runtimes/linux-x64/native/</c>, <c>runtimes/osx-arm64/native/</c> - so restoring
+        ///     for the reported RID selects no native assets at all: every library comes back with an
+        ///     empty <c>NativeLibraries</c> list, nothing is handed to <c>NativeLibraryHelper</c>, and
+        ///     asset compilation dies on the first P/Invoke, typically <c>libbulletc</c> from the
+        ///     Stride.Physics module initializer.
+        ///   </para>
+        ///   <para>
+        ///     Declaring the portable RID as an inherited runtime is not enough: NuGet records the
+        ///     <c>#import</c> but still resolves no native assets into the specific RID's target, and
+        ///     the extra target would then be the one <see cref="ListNativeLibs"/> reads via
+        ///     <c>Targets.Last()</c>. Restoring for the portable RID outright is what actually works.
+        ///   </para>
+        ///   <para>
+        ///     Windows only escapes this because its reported RID is already the portable <c>win-x64</c>,
+        ///     an exact match for the folder packages ship - which is why it has never surfaced there.
+        ///   </para>
+        ///   <para>
+        ///     The musl check is deliberate: Alpine reports <c>linux-musl-x64</c>, whose natives are a
+        ///     genuinely different build and must not be collapsed to <c>linux-x64</c>.
+        ///   </para>
+        /// </remarks>
+        private static string GetPortableRuntimeIdentifier(string runtimeIdentifier)
+        {
+            var architecture = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.X86 => "x86",
+                Architecture.X64 => "x64",
+                Architecture.Arm => "arm",
+                Architecture.Arm64 => "arm64",
+                _ => null,
+            };
+
+            if (architecture is null)
+                return runtimeIdentifier;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return $"win-{architecture}";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return $"osx-{architecture}";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return runtimeIdentifier.StartsWith("linux-musl", StringComparison.Ordinal)
+                    ? $"linux-musl-{architecture}"
+                    : $"linux-{architecture}";
+
+            return runtimeIdentifier;
+        }
+
         public static (RestoreRequest, RestoreResult) Restore(ILogger logger, NuGetFramework nugetFramework, string runtimeIdentifier, string packageName, VersionRange versionRange, string settingsRoot = null)
         {
+            // Packages carry their natives under portable RIDs only, and a restore keyed on the host's
+            // reported RID will not fall back to them. See GetPortableRuntimeIdentifier.
+            runtimeIdentifier = GetPortableRuntimeIdentifier(runtimeIdentifier);
+
             var settings = NuGet.Configuration.Settings.LoadDefaultSettings(settingsRoot);
 
             var assemblies = new List<string>();
