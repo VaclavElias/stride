@@ -43,8 +43,8 @@ public struct ProfilingState : IDisposable
     /// <summary>
     /// Gets the profiling unique identifier.
     /// </summary>
-    /// <value>The profiling unique identifier.</value>
-    public int ProfilingId { get; }
+    /// <value>The profiling unique identifier. Can be -1 when the state was created while its key was disabled.</value>
+    public int ProfilingId { get; private set; }
 
     /// <summary>
     /// Gets the profiling key.
@@ -55,7 +55,9 @@ public struct ProfilingState : IDisposable
     /// <summary>
     /// A list of attributes (dimensions) associated with this profiling state.
     /// </summary>
-    public TagList Attributes { get; }
+    /// <remarks>Always empty: a field-backed <see cref="TagList"/> would add ~150 bytes to every copy of this
+    /// struct, which is returned by value from <see cref="Profiler.Begin(ProfilingKey)"/> on hot paths.</remarks>
+    public readonly TagList Attributes => default;
 
     /// <summary>
     /// Gets or sets the TickFrequency used to convert <see cref="long"/> timestamp to <see cref="TimeSpan"/>.
@@ -77,6 +79,10 @@ public struct ProfilingState : IDisposable
     public void CheckIfEnabled()
     {
         isEnabled = Profiler.IsEnabled(ProfilingKey);
+        // States created while their key was disabled have no id reserved; assign one on first activation
+        // so emitted Begin/Mark/End events can still be correlated.
+        if (isEnabled && ProfilingId < 0)
+            ProfilingId = Profiler.NextProfileId();
     }
 
     public void Dispose()

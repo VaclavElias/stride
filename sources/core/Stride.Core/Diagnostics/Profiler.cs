@@ -259,10 +259,18 @@ public static class Profiler
     {
         ArgumentNullException.ThrowIfNull(profilingKey);
 
-        var localProfileId = Interlocked.Increment(ref profileId) - 1;
         var isProfileActive = IsEnabled(profilingKey);
+        // Only reserve an id for active profiles: this method runs on hot paths from many threads at once,
+        // and incrementing the shared counter for disabled keys causes needless cache-line contention.
+        // Inactive states get an id lazily in ProfilingState.CheckIfEnabled if they are activated later.
+        var localProfileId = isProfileActive ? NextProfileId() : -1;
 
         return new ProfilingState(localProfileId, profilingKey, isProfileActive);
+    }
+
+    internal static int NextProfileId()
+    {
+        return Interlocked.Increment(ref profileId) - 1;
     }
 
     /// <summary>
