@@ -124,7 +124,18 @@ namespace Stride.AssetCompiler
                 var gameSettingsAsset = package.GetGameSettingsAsset();
                 if (gameSettingsAsset == null)
                 {
-                    builderOptions.Logger.Warning($"Could not find game settings asset at location [{GameSettingsAsset.GameSettingsLocation}]. Use a Default One");
+                    // A code-only project has no .sdpkg on disk and therefore no game settings asset by design - it is
+                    // meant to run on the defaults, so there is nothing to warn about. A real package missing its
+                    // GameSettings is still unexpected and keeps the warning. The file check is deliberate:
+                    // Package.IsImplicitProject compares AssetFolders[0].Path against "Assets", which no longer holds
+                    // once the session has resolved the folders to absolute paths, so it is false here for every project.
+                    var isCodeOnly = package.FullPath is null || !File.Exists(package.FullPath);
+                    var message = $"Could not find game settings asset at location [{GameSettingsAsset.GameSettingsLocation}]; using the default game settings.";
+                    if (isCodeOnly)
+                        builderOptions.Logger.Info(message);
+                    else
+                        builderOptions.Logger.Warning(message);
+
                     gameSettingsAsset = GameSettingsFactory.Create();
                 }
 
@@ -542,7 +553,7 @@ namespace Stride.AssetCompiler
 
             // Start ServiceWire pipe for communication with process
             var processBuilderRemote = new ProcessBuilderRemote(assemblyContainer, commandContext, command);
-            var host = new NpHost(address,null,null, new StrideServiceWireSerializer());
+            var host = new NpHost(address, null, null, new StrideServiceWireSerializer());
             host.AddService<IProcessBuilderRemote>(processBuilderRemote);
 
             var startInfo = new ProcessStartInfo

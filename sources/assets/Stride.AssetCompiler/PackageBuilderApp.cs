@@ -543,18 +543,24 @@ namespace Stride.AssetCompiler
 
         private static string FormatLog(ILogMessage message)
         {
-            //$filename($row,$column): $error_type $error_code: $error_message
-            //C:\Code\Stride\sources\assets\Stride.AssetCompiler\PackageBuilder.cs(89,13,89,70): warning CS1717: Assignment made to same variable; did you mean to assign something else?
+            // MSBuild canonical format, which is how Visual Studio and dotnet build surface these lines:
+            //   $filename($row,$column): $type $code: $text
+            //   e.g. PackageBuilder.cs(89,13): warning CS1717: Assignment made to same variable; did you mean to assign something else?
+            // The code slot must hold a stable token. This used to be the elapsed time, which made every
+            // message a unique, timestamp-shaped diagnostic that NoWarn / WarningsAsMessages could never
+            // match. The time is still printed - it is how slow steps are spotted - but after the colon.
             var builder = new StringBuilder();
             var assetLogMessage = message as AssetLogMessage;
             // Location
             if (assetLogMessage != null)
                 builder.Append($"{assetLogMessage.File}({assetLogMessage.Line + 1},{assetLogMessage.Character + 1}): ");
-            // Message type
-            builder.Append(message.Type.ToString().ToLowerInvariant()).Append(" ");
-            builder.Append((clock.ElapsedMilliseconds * 0.001).ToString("0.000"));
-            builder.Append("s: ");
-            builder.Append($"[{message.Module ?? "AssetCompiler"}] ");
+            // Message type and code: asset messages carry their AssetMessageCode; everything else is
+            // identified by its module, so at least "all AssetCompiler warnings" can be suppressed.
+            var module = message.Module ?? "AssetCompiler";
+            var code = assetLogMessage != null ? assetLogMessage.MessageCode.ToString() : module;
+            builder.Append(message.Type.ToString().ToLowerInvariant()).Append(' ').Append(code).Append(": ");
+            builder.Append((clock.ElapsedMilliseconds * 0.001).ToString("0.000")).Append("s ");
+            builder.Append($"[{module}] ");
             builder.Append(message.Text);
             var exceptionInfo = message.ExceptionInfo;
             if (exceptionInfo != null)
