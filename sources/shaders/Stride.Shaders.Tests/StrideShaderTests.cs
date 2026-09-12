@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -62,6 +62,29 @@ public class StrideShaderTests
         var log = new Stride.Core.Diagnostics.LoggerResult();
         Assert.True(shaderMixer.MergeSDSL(new ShaderClassSource("FieldNameShadowsIntrinsicMethod"), new ShaderMixer.Options(true), log, out _, out _, out _, out _),
             string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+    }
+
+    // Regression: a Geometry shader reading a stage-input stream field directly through the input
+    // array element (`input[i].Field`), not just via a whole-struct `streams = input[i]` assignment,
+    // used to crash StreamAccessPatcher with a NullReferenceException. ReadWriteAnalyzer only
+    // recognized `PointerType { BaseType: StreamsType }` as a stream access on OpVariable/
+    // OpFunctionParameter, but a GS per-vertex input parameter (`Input input[3]`) is
+    // `PointerType { BaseType: ArrayType { BaseType: StreamsType } }`, so `input[i].Field` reads were
+    // never marked as "Read" and the field never got an InputStructFieldIndex.
+    [Fact]
+    public void GeometryShaderInputArrayFieldAccessDoesNotCrashCompiler()
+    {
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        shaderMixer.ShaderLoader.LoadExternalBuffer("GSInputArrayFieldAccess", [], out _, out _, out _);
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(new ShaderClassSource("GSInputArrayFieldAccess"), new ShaderMixer.Options(true), log, out var bytecode, out _, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        File.WriteAllBytes("GSInputArrayFieldAccess.spv", bytecode);
+        var validationResult = Spv.ValidateFile("GSInputArrayFieldAccess.spv");
+        Assert.True(validationResult.IsValid, validationResult.Output);
     }
 
     // Reflection reports a multidimensional cbuffer array as a flat element count
@@ -838,5 +861,102 @@ new ShaderMacro("class", "shader"),
                 Console.WriteLine(hlsl);
             }
         }
+    }
+
+    // A composition whose shader derives from the same base as its host must not contribute that
+    // base's virtual method over the root's own override.
+    [Fact]
+    public void CompositionSharingABaseDoesNotOverrideTheRootsOverride()
+    {
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        foreach (var name in new[] { "ComposeSharedBase", "ComposeSharedHelper", "ComposeSharedRoot" })
+            shaderMixer.ShaderLoader.LoadExternalBuffer(name, [], out _, out _, out _);
+
+        var shaderSource = new ShaderMixinSource
+        {
+            Mixins = { new ShaderClassSource("ComposeSharedRoot") },
+            Compositions = { ["helper"] = new ShaderClassSource("ComposeSharedHelper") },
+        };
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(shaderSource, new ShaderMixer.Options(true), log, out var bytecode, out var reflection, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        // The body survived, so its texture is still live and reflected.
+        var disassembly = Spv.Dis(SpirvBytecode.CreateFromSpan(bytecode), DisassemblerFlags.Name | DisassemblerFlags.Id | DisassemblerFlags.InstructionIndex, true);
+        Assert.True(reflection.ResourceBindings.Any(b => b.RawName.EndsWith("WriteTex")), disassembly);
+        Assert.Contains("OpImageWrite", disassembly);
+    }
+
+    // Control for the above: the very same shader, composing a helper that does not derive from
+    // ComposeSharedBase. This one has always worked, and pins the difference to the shared base.
+    [Fact]
+    public void CompositionWithoutASharedBaseKeepsTheRootsOverride()
+    {
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        foreach (var name in new[] { "ComposeSharedBase", "ComposePlainHelper", "ComposePlainRoot" })
+            shaderMixer.ShaderLoader.LoadExternalBuffer(name, [], out _, out _, out _);
+
+        var shaderSource = new ShaderMixinSource
+        {
+            Mixins = { new ShaderClassSource("ComposePlainRoot") },
+            Compositions = { ["helper"] = new ShaderClassSource("ComposePlainHelper") },
+        };
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(shaderSource, new ShaderMixer.Options(true), log, out var bytecode, out var reflection, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        var disassembly = Spv.Dis(SpirvBytecode.CreateFromSpan(bytecode), DisassemblerFlags.Name | DisassemblerFlags.Id | DisassemblerFlags.InstructionIndex, true);
+        Assert.True(reflection.ResourceBindings.Any(b => b.RawName.EndsWith("WriteTex")), disassembly);
+        Assert.Contains("OpImageWrite", disassembly);
+    }
+    // `streams = input[i]` in a geometry shader assigns the members the stage input carries and must
+    // leave every other stream member as it was. Checked after LegalizeForHlsl: the branch on the
+    // carried value must still be a branch there, not a folded constant.
+    [Fact]
+    public void GeometryStreamsAssignKeepsMembersTheInputDoesNotCarry()
+    {
+        SpirvCrossSupport.SkipUnlessAvailable();
+
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        shaderMixer.ShaderLoader.LoadExternalBuffer("GeometryStreamsAssignKeepsOthers", [], out _, out _, out _);
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(new ShaderClassSource("GeometryStreamsAssignKeepsOthers"), new ShaderMixer.Options(true), log, out var bytecode, out _, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        var legalized = SpirvTools.LegalizeForHlsl(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(bytecode.ToArray()));
+        var translator = new SpirvTranslator(legalized.AsMemory());
+        var geometry = translator.GetEntryPoints().First(x => x.ExecutionModel == ExecutionModel.Geometry);
+        var hlsl = translator.Translate(Backend.Hlsl, geometry);
+
+        Assert.DoesNotContain("if (true)", hlsl);
+        Assert.DoesNotContain("if (false)", hlsl);
+    }
+
+    // A method with two geometry stream parameters loses both, and its call both arguments.
+    [Fact]
+    public void GeometryStreamsMethodWithTwoStreamParameters()
+    {
+        SpirvCrossSupport.SkipUnlessAvailable();
+
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        shaderMixer.ShaderLoader.LoadExternalBuffer("GeometryStreamsTwoStreamParameters", [], out _, out _, out _);
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(new ShaderClassSource("GeometryStreamsTwoStreamParameters"), new ShaderMixer.Options(true), log, out var bytecode, out _, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        var legalized = SpirvTools.LegalizeForHlsl(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(bytecode.ToArray()));
+        var translator = new SpirvTranslator(legalized.AsMemory());
+        var geometry = translator.GetEntryPoints().First(x => x.ExecutionModel == ExecutionModel.Geometry);
+        var hlsl = translator.Translate(Backend.Hlsl, geometry);
+
+        Assert.Contains("Append", hlsl);
     }
 }
