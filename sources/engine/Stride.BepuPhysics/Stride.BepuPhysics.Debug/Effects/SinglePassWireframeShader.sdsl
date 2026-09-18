@@ -157,6 +157,8 @@
 
             // vertex 0
             streams = input[0];
+            streams.EdgeA = float4(0, 0, 0, 0);
+            streams.EdgeB = float4(0, 0, 0, 0);
             streams.Case = vertexCase;
             streams.EdgeA[0] = vertExclude.x * excludeEdgeLength;
             streams.EdgeA[1] = heights[0];
@@ -168,6 +170,8 @@
 
             // vertex 1
             streams = input[1];
+            streams.EdgeA = float4(0, 0, 0, 0);
+            streams.EdgeB = float4(0, 0, 0, 0);
             streams.Case = vertexCase;
             streams.EdgeA[0] = vertExclude.x * excludeEdgeLength;
             streams.EdgeA[1] = vertExclude.y * excludeEdgeLength;
@@ -179,6 +183,8 @@
 
             // vertex 2
             streams = input[2];
+            streams.EdgeA = float4(0, 0, 0, 0);
+            streams.EdgeB = float4(0, 0, 0, 0);
             streams.Case = vertexCase;
             streams.EdgeA[0] = heights[2];
             streams.EdgeA[1] = vertExclude.y * excludeEdgeLength;

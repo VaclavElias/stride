@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using CommunityToolkit.HighPerformance;
+using Silk.NET.Core.Native;
+using Silk.NET.Direct3D.Compilers;
 using Silk.NET.SPIRV;
 using Silk.NET.SPIRV.Cross;
 using Stride.Core.IO;
@@ -1137,6 +1139,53 @@ new ShaderMacro("class", "shader"),
         var hlsl = translator.Translate(Backend.Hlsl, geometry);
 
         Assert.Contains("Append", hlsl);
+    }
+
+    // `streams = input[i]` followed by a partial write (`streams.EdgeA.x = ...`) of a stream the input
+    // does not carry and that nothing wrote before the copy. Keeping "what streams already holds" for
+    // that member must not surface as a read of an uninitialised local in the HLSL: fxc rejects
+    // `_2168 = _2168;` with X4000, which is how Stride.BepuPhysics.Debug's wireframe shader broke.
+    [Fact]
+    public void GeometryStreamsAssignThenPartialWriteCompilesWithFxc()
+    {
+        SpirvCrossSupport.SkipUnlessAvailable();
+        if (!OperatingSystem.IsWindows())
+            Assert.Skip("fxc (d3dcompiler_47) is only available on Windows");
+
+        var loader = new ShaderLoader("./assets/SDSL/CompilerTests");
+        var shaderMixer = new ShaderMixer(loader);
+        shaderMixer.ShaderLoader.LoadExternalBuffer("GeometryStreamsAssignPartialWrite", [], out _, out _, out _);
+
+        var log = new Stride.Core.Diagnostics.LoggerResult();
+        Assert.True(shaderMixer.MergeSDSL(new ShaderClassSource("GeometryStreamsAssignPartialWrite"), new ShaderMixer.Options(true), log, out var bytecode, out _, out _, out _),
+            string.Join(Environment.NewLine, log.Messages.Select(m => m.Text)));
+
+        var legalized = SpirvTools.LegalizeForHlsl(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(bytecode.ToArray()));
+        var translator = new SpirvTranslator(legalized.AsMemory());
+        var geometry = translator.GetEntryPoints().First(x => x.ExecutionModel == ExecutionModel.Geometry);
+        var hlsl = translator.Translate(Backend.Hlsl, geometry);
+
+        // The copy may still read the member back (`_N = _N;`); what matters is that fxc accepts it,
+        // which it only does when the local was initialised.
+        Assert.True(FxcCompiles("gs_5_0", hlsl, out var errors), errors + Environment.NewLine + hlsl);
+    }
+
+    // Compiles HLSL with d3dcompiler_47 the way the effect compiler will, entry point "main".
+    private static unsafe bool FxcCompiles(string profile, string source, out string errors)
+    {
+        var compiler = D3DCompiler.GetApi();
+        var sourceBytes = Encoding.ASCII.GetBytes(source);
+        ComPtr<ID3D10Blob> code = default;
+        ComPtr<ID3D10Blob> errorBlob = default;
+
+        HResult hr = compiler.Compile(in sourceBytes[0], (nuint)sourceBytes.Length, "test.hlsl", null,
+            ref System.Runtime.CompilerServices.Unsafe.NullRef<ID3DInclude>(), "main", profile, 0, 0, ref code, ref errorBlob);
+
+        errors = errorBlob.Handle is not null ? SilkMarshal.PtrToString((nint)errorBlob.GetBufferPointer()) ?? "" : "";
+        errorBlob.Dispose();
+        code.Dispose();
+
+        return hr.IsSuccess;
     }
 
     // A static call (Utils.Method(x)) from a stage method is not a non-stage member access.

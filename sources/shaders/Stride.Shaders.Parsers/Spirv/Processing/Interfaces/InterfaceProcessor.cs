@@ -499,8 +499,11 @@ namespace Stride.Shaders.Spirv.Processing.Interfaces
             // Generate streams struct types (i.e. VS_STREAMS VS_INPUT and VS_OUTPUT)
             GenerateStreamStructTypes(context, executionModel, streams, inputStreams, outputStreams, out var inputType, out var outputType, out var streamsType, out var constantsType);
 
-            // Create a static global streams variable
-            var streamsVariable = context.Add(new OpVariable(context.GetOrRegister(new PointerType(streamsType, Specification.StorageClass.Private)), context.Bound++, Specification.StorageClass.Private, null));
+            // Create a static global streams variable, zero-initialised: `streams = input[i]` keeps the
+            // members the input does not carry by reading them back, and a member nothing wrote before
+            // that copy would otherwise reach the HLSL as `_N = _N;`, which fxc rejects (X4000). The
+            // stores are dead for every member the shader writes first and the optimiser drops them.
+            var streamsVariable = context.Add(new OpVariable(context.GetOrRegister(new PointerType(streamsType, Specification.StorageClass.Private)), context.Bound++, Specification.StorageClass.Private, context.CreateDefaultConstantComposite(streamsType).Id));
             context.AddName(streamsVariable.ResultId, $"streams{stage}");
 
             var streamLayout = new StageStreamLayout(inputStreams, outputStreams, patchInputStreams, patchOutputStreams, inputType, outputType, streamsType, constantsType, arrayInputSize, arrayOutputSize, streamsVariable.ResultId);

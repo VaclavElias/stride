@@ -1,0 +1,41 @@
+// A geometry shader that assigns the stage input over `streams` and then writes only some components
+// of a stream the input does not carry, the way Stride.BepuPhysics.Debug's SinglePassWireframeShader
+// fills EdgeA.xyz per vertex. The stream was never written before the copy, so "keep what streams
+// holds" must not become a read of an uninitialised local in the HLSL: fxc rejects that with X4000.
+
+namespace Stride.Shaders.Tests;
+
+shader GeometryStreamsAssignPartialWrite
+{
+    stream float4 Position : POSITION;
+    stream float4 ShadingPosition : SV_Position;
+    stream float4 ColorTarget : SV_Target0;
+
+    // Geometry-stage only, and only .xyz is ever written.
+    stream float4 EdgeA;
+
+    void VSMain()
+    {
+        streams.ShadingPosition = streams.Position;
+    }
+
+    [maxvertexcount(3)]
+    void GSMain(triangle Input input[3], inout TriangleStream<Output> outStream)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            streams = input[i];
+            streams.EdgeA.x = input[i].Position.x;
+            streams.EdgeA.y = input[i].Position.y;
+            streams.EdgeA.z = input[i].Position.z;
+            outStream.Append(streams);
+        }
+
+        outStream.RestartStrip();
+    }
+
+    void PSMain()
+    {
+        streams.ColorTarget = float4(streams.EdgeA.xyz, 1);
+    }
+}
