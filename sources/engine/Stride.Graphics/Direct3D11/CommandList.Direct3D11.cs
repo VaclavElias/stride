@@ -1264,8 +1264,12 @@ namespace Stride.Graphics
             if (sourceData.IsEmpty)
                 return;
 
-            nativeDeviceContext->UpdateSubresource(resource.NativeResource, (uint)subResourceIndex, pDstBox: null,
-                                                   sourceData.GetPointer(), SrcRowPitch: 0, SrcDepthPitch: 0);
+            // The span may be backed by a managed array, so pin it for the duration of the native call
+            fixed (byte* sourceDataPtr = sourceData)
+            {
+                nativeDeviceContext->UpdateSubresource(resource.NativeResource, (uint) subResourceIndex, pDstBox: null,
+                                                       sourceDataPtr, SrcRowPitch: 0, SrcDepthPitch: 0);
+            }
         }
 
         /// <summary>
@@ -1304,7 +1308,7 @@ namespace Stride.Graphics
         /// </param>
         /// <exception cref="ArgumentNullException"><paramref name="resource"/> is <see langword="null"/>.</exception>
         /// <inheritdoc cref="UpdateSubResource(GraphicsResource, int, ReadOnlySpan{byte})" path="/remarks" />
-        internal void UpdateSubResource(GraphicsResource resource, int subResourceIndex, ReadOnlySpan<byte> sourceData, ResourceRegion region)
+        internal unsafe void UpdateSubResource(GraphicsResource resource, int subResourceIndex, ReadOnlySpan<byte> sourceData, ResourceRegion region)
         {
             ArgumentNullException.ThrowIfNull(resource);
 
@@ -1313,8 +1317,12 @@ namespace Stride.Graphics
 
             ref Box destBox = ref region.As<ResourceRegion, Box>();
 
-            nativeDeviceContext->UpdateSubresource(resource.NativeResource, (uint) subResourceIndex, in destBox,
-                                                   sourceData.GetPointer(), SrcRowPitch: 0, SrcDepthPitch: 0);
+            // The span may be backed by a managed array, so pin it for the duration of the native call
+            fixed (byte* sourceDataPtr = sourceData)
+            {
+                nativeDeviceContext->UpdateSubresource(resource.NativeResource, (uint) subResourceIndex, in destBox,
+                                                       sourceDataPtr, SrcRowPitch: 0, SrcDepthPitch: 0);
+            }
         }
 
         /// <summary>
