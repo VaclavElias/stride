@@ -112,7 +112,8 @@ namespace Stride.Rendering
             var pointOnPlane = viewInverse.TranslationVector + viewInverse.Forward * view.NearClipPlane;
             var plane = new Plane(planeNormal, Vector3.Dot(pointOnPlane, planeNormal)); // TODO: Point-normal-constructor seems wrong. Check.
 
-            // Prepare culling mask
+            // Prepare culling mask: the array is shared by every view, so drop the previous view's stages first
+            Array.Clear(viewRenderStageMask);
             foreach (var renderViewStage in view.RenderStages)
             {
                 var renderStageIndex = renderViewStage.Index;
@@ -317,9 +318,12 @@ namespace Stride.Rendering
             foreach (var renderStageSelector in renderFeature.RenderStageSelectors)
                 renderStageSelector.Process(renderObject);
 
-            // Compute render stage mask
+            // Compute render stage mask, from scratch: on a reevaluation the entry still holds the
+            // stages of the previous one
             var renderStageMask = RenderData.GetData(RenderStageMaskKey);
             var renderStageMaskNode = renderObject.VisibilityObjectNode * stageMaskMultiplier;
+
+            renderStageMask.Data.AsSpan(renderStageMaskNode.Index, stageMaskMultiplier).Clear();
 
             for (int index = 0; index < renderObject.ActiveRenderStages.Length; index++)
             {

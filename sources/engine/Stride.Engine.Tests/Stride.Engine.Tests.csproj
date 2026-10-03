@@ -43,6 +43,7 @@
     <Compile Include="TestEntityManager.cs" />
     <Compile Include="TestCameraProcessor.cs" />
     <Compile Include="TestTransformComponent.cs" />
+    <Compile Include="VisibilityGroupStageMaskTest.cs" />
     <Compile Include="TestUpdateEngine.cs" />
     <None Include="Build\TestSerializer.cs" />
     <!-- TODO: Investigate [Ignore] attribute not found - excluded for now -->
